@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todo List</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        form {
+            margin-bottom: 20px;
+        }
+
+        form label {
+            display: block;
+            margin-top: 10px;
+        }
+
+        form input, form textarea, form button {
+            display: block;
+            margin-top: 5px;
+        }
+
+        form input, form textarea {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+        }
+
+        form button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        form button:hover {
+            background-color: #45a049;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        li {
+            margin-bottom: 15px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        li.completed {
+            background-color: #e0e0e0;
+            text-decoration: line-through;
+        }
+
+        .task-status {
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Todo List</h1>
+    
+    <!-- Form to add a new task -->
+    <form id="taskForm">
+        <label for="task_name">Title:</label>
+        <input type="text" id="task_name" name="task_name" required>
+        <label for="task_description">Description:</label>
+        <textarea id="task_description" name="task_description" required></textarea>
+        <label for="due_date">Due Date:</label>
+        <input type="date" id="due_date" name="due_date">
+        <button type="submit">Add Task</button>
+    </form>
+    
+    <ul id="taskList">
+        <% todos.forEach(function(todo) { %>
+            <li data-id="<%= todo.id %>" class="<%= todo.status === 'completed' ? 'completed' : '' %>">
+                <input type="checkbox" class="task-checkbox" <%= todo.status === 'completed' ? 'checked' : '' %> >
+                <strong><%= todo.task_name %></strong><br>
+                <%= todo.task_description %> <br>
+                Due date: <%= moment(todo.due_date).format('YYYY-MM-DD') %> <br>
+                Status: <span class="task-status"><%= todo.status %></span>
+            </li>
+        <% }); %>
+    </ul>
+
+    <script>
+        $(document).ready(function() {
+            // Handle form submission
+            $('#taskForm').on('submit', function(e) {
+                e.preventDefault();
+                const taskData = {
+                    task_name: $('#task_name').val(),
+                    task_description: $('#task_description').val(),
+                    due_date: $('#due_date').val()
+                };
+                
+                $.ajax({
+                    type: 'POST',
+                    url: '/todos',
+                    contentType: 'application/json',
+                    data: JSON.stringify(taskData),
+                    success: function(task) {
+                        $('#taskList').append(
+                            `<li data-id="${task.id}" class="${task.status === 'completed' ? 'completed' : ''}">
+                                <input type="checkbox" class="task-checkbox">
+                                <strong>${task.task_name}</strong><br>
+                                ${task.task_description} <br>
+                                Due date: ${moment(task.due_date).format('YYYY-MM-DD')} <br>
+                                Status: <span class="task-status">${task.status}</span>
+                            </li>`
+                        );
+                        $('#task_name').val('');
+                        $('#task_description').val('');
+                        $('#due_date').val('');
+                    },
+                    error: function(err) {
+                        console.error('Error adding task:', err);
+                    }
+                });
+            });
+
+            // Handle checkbox change
+            $('#taskList').on('change', '.task-checkbox', function() {
+                const $li = $(this).closest('li');
+                const taskId = $li.data('id');
+                const newStatus = this.checked ? 'completed' : 'pending';
+
+                $.ajax({
+                    type: 'PUT',
+                    url: `/todos/${taskId}`,
+                    contentType: 'application/json',
+                    data: JSON.stringify({ status: newStatus }),
+                    success: function() {
+                        $li.find('.task-status').text(newStatus);
+                        $li.toggleClass('completed', newStatus === 'completed');
+                    },
+                    error: function(err) {
+                        console.error('Error updating task status:', err);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
+
+
